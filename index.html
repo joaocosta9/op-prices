@@ -37,6 +37,7 @@ header{position:sticky;top:0;z-index:5;background:var(--paper);
 #tag::placeholder{color:#9aa1ad;font-weight:400}
 .sub{display:flex;justify-content:space-between;align-items:center;gap:10px;
   margin-top:6px;font-size:11px;color:var(--mute)}
+#fxnote{font-style:normal;color:#9aa1ad}
 .sub input{width:52px;padding:2px 5px;font-size:11px;text-align:right;color:var(--ink);
   background:var(--paper);border:1px solid var(--rule);border-radius:5px}
 
@@ -80,7 +81,7 @@ a{color:inherit}
   </div>
   <div class="sub">
     <span>11,575 cards, priced 2026-09-21. Margin after 5% fee.</span>
-    <span>€1 = ¥<input id="fx" type="number" inputmode="decimal" step="1" value="170"></span>
+    <span>€1 = ¥<input id="fx" type="number" inputmode="decimal" step="0.01" value="170"> <em id="fxnote"></em></span>
   </div>
 </header>
 <main><div id="out"></div></main>
@@ -231,13 +232,45 @@ function paint(cards, note, detail = true) {
   out.innerHTML = h
 }
 
-try { const saved = localStorage.getItem('fx'); if (saved) fx.value = saved } catch {}
-fx.addEventListener('change', () => { try { localStorage.setItem('fx', fx.value) } catch {} ; render() })
+const fxNote = document.getElementById('fxnote')
+
+function showFx(value, when, manual) {
+  fx.value = value
+  fxNote.textContent = manual ? 'set by you' : when ? 'rate ' + when.slice(0, 10) : ''
+}
+
+try {
+  const saved = JSON.parse(localStorage.getItem('fx') || 'null')
+  if (saved) showFx(saved.rate, saved.at, saved.manual)
+} catch {}
+
+// Live rate when there's signal; the last known one otherwise, so a basement still prices in yen.
+async function refreshRate() {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/EUR', { cache: 'no-store' })
+    const j = await r.json()
+    const jpy = j && j.rates && j.rates.JPY
+    if (!jpy) return
+    const saved = JSON.parse(localStorage.getItem('fx') || 'null')
+    if (saved && saved.manual) return
+    const rounded = Math.round(jpy * 100) / 100
+    showFx(rounded, j.time_last_update_utc, false)
+    localStorage.setItem('fx', JSON.stringify({ rate: rounded, at: j.time_last_update_utc, manual: false }))
+    render()
+  } catch {}
+}
+
+fx.addEventListener('change', () => {
+  try { localStorage.setItem('fx', JSON.stringify({ rate: fx.value, at: null, manual: true })) } catch {}
+  fxNote.textContent = 'set by you'
+  render()
+})
 q.addEventListener('input', render)
 tag.addEventListener('input', render)
 render()
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {})
+refreshRate()
 
 </script>
 </body>
