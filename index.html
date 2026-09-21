@@ -233,10 +233,11 @@ function paint(cards, note, detail = true) {
 }
 
 const fxNote = document.getElementById('fxnote')
+const isoDay = s => { const d = new Date(s); return isNaN(d) ? '' : d.toISOString().slice(0, 10) }
 
 function showFx(value, when, manual) {
   fx.value = value
-  fxNote.textContent = manual ? 'set by you' : when ? 'rate ' + when.slice(0, 10) : ''
+  fxNote.textContent = manual ? 'set by you' : when ? 'rate ' + isoDay(when) : ''
 }
 
 try {

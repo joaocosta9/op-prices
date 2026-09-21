@@ -1,4 +1,4 @@
-const CACHE='cards-20260921084147'
+const CACHE='cards-20260921084246'
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png']
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))
